@@ -16,7 +16,7 @@ RIGHT = 100
 ESC = 27
 ENTER = 13
 
-fullscreen = True
+fullscreen = False
 
 if fullscreen:
     width = 1920
@@ -24,12 +24,14 @@ if fullscreen:
     win = p.display.set_mode((width, height), p.FULLSCREEN)
 
 else:
-    width = 1000
+    width = 1600
     height = 800
     win = p.display.set_mode((width, height))
-    
-visible_screen_length = 20
-visible_screen_height = visible_screen_length * height / float(width)
+
+scale = 20
+
+#visible_screen_length = 20
+#visible_screen_height = visible_screen_length * height / float(width)
 
 green = (0,250,0)
 grey = (100,100,100)
@@ -39,9 +41,8 @@ grid_slot_color = (170,170,170)
 finish_line_color = (255,255,255)
 check_point_color = (110,110,110)
 
-original_p_car_surface = None 
-car_size = int(0.6 * (width /visible_screen_length))
-original_p_car_surface = None 
+car_size = int(0.6 * scale)
+original_p_car_surface = None
 mini_map_surface = None
 
 track_list = os.listdir(direct + "/tracks")
@@ -94,7 +95,7 @@ def correct_settings_range(settings, car_list, track_list):
 
     return settings
 
-    
+
 def update_current_settings(settings, current_choice, car_list, track_list, event):
     if event == RIGHT:
         if current_choice == 2:
@@ -115,16 +116,16 @@ def update_current_settings(settings, current_choice, car_list, track_list, even
 def display_settings(settings, current_choice, car_list, track_list):
     color_list = [black for i in range(4)]
     color_list[current_choice] = (0, 200, 100)
-    
+
     write_text("Car:", width * 0.05, height * 0.05, int(width * 0.04), color_list[0])
     write_text("Track:", width * 0.05, height * 0.1, int(width * 0.04), color_list[1])
     write_text("Zoom:", width * 0.05, height * 0.15, int(width * 0.04), color_list[2])
     write_text("Start", width * 0.05, height * 0.8, int(width * 0.04), color_list[3])
-    
+
     write_text(car_list[settings[0]], width * 0.5, height * 0.05, int(width * 0.04), color_list[0])
     write_text(track_list[settings[1]], width * 0.5, height * 0.1, int(width * 0.04), color_list[1])
     write_text(str(settings[2]), width * 0.5, height * 0.15, int(width * 0.04), color_list[2])
-    
+
 
 def start_screen(event, settings):
     if event != ESC:
@@ -139,10 +140,10 @@ def start_screen(event, settings):
 
     while True:
         event = check_event()
-        
+
         if current_choice == 3 and event == ENTER:
             break
-        
+
         current_choice = get_current_choice(current_choice, event)
         settings = update_current_settings(settings, current_choice, car_list, track_list, event)
 
@@ -152,8 +153,11 @@ def start_screen(event, settings):
 
     return settings
 
-
 def restart_game(settings):
+    """if settings == None:
+        return"""
+
+
     grid = read_grid(direct + "/tracks/" + track_list[settings[1]])
     global visible_screen_length
     global visible_screen_height
@@ -169,19 +173,19 @@ def restart_game(settings):
     #screen
     visible_screen_length = settings[2]
     visible_screen_height = visible_screen_length * height / float(width)
-    tile_length = 5
+    tile_length = 1 #width / len(grid)
 
     #minimap
     if len(grid) > len(grid[1]):
         mini_tile_length = (width / len(grid)) / 2
     else:
         mini_tile_length = (height / len(grid[1])) / 2
-    
+
     mini_map_surface = p.Surface((mini_tile_length * len(grid[1]), mini_tile_length * len(grid)))
     mini_map_surface.fill(green)
     mini_map_surface.set_colorkey(green)
     mini_map_surface.set_alpha(255)
-    
+
     for y in range(len(grid)):
         for x in range(len(grid[1])):
             if grid[y][x] != None:
@@ -189,10 +193,9 @@ def restart_game(settings):
                                                 mini_tile_length, mini_tile_length))
 
     #car
-    car_size = int(0.6 * (width /visible_screen_length))
+    #car_size = int(0.6 * (width / visible_screen_length))
     original_p_car_surface = p.image.load(direct + "/cars/" + car_list[settings[0]])
-    original_p_car_surface = p.transform.scale(original_p_car_surface, (car_size, car_size))
-    p_car_surface = original_p_car_surface
+    p_car_surface = p.transform.scale(original_p_car_surface, (car_size, car_size))
     p_car_pos = place_car(grid)
 
     #surface, position, prev_position, speed, angle, hit_box, terrain, time_list, check_point, invalid
@@ -204,22 +207,20 @@ def restart_game(settings):
 
 def read_grid(path):
     grid = []
-    
+
     with open(path, "r") as open_file:
         for row in open_file:
-            grid.append([row])
+            grid.append(row)
 
     new_grid = []
-    
+
     for row in grid:
-        for char in row:
-            temp = char.split(" ")
-            
+        temp = row.split(" ")
         new_grid.append(temp)
 
     for row in range(len(new_grid)):
         for obj in range(len(new_grid[row])):
-            
+
             if new_grid[row][obj] == "None":
                 new_grid[row][obj] = None
 
@@ -242,34 +243,32 @@ def read_grid(path):
                 new_grid[row][obj] = check_point_color
 
     for row in range(len(new_grid)):
-        new_grid[row].remove("\n")
+        del new_grid[row][-1]
 
     return new_grid
 
 
 def write_text(txt ,x, y, size, color):
-    
+
     text = p.font.SysFont('timesnewroman', size)
     textsurface = text.render(txt, False, color)
     win.blit(textsurface, (x, y))
 
 
 def place_car(grid):
-    
     for y in range(len(grid)):
         for x in range(len(grid[y])):
             if grid[y][x] == grid_slot_color:
-                car_pos = (x * tile_length, y * tile_length)
-
+                car_pos = (x, y)
     return car_pos
 
-#---------------------------Car-class----------------------------------------------
+#---------------------------Car- class----------------------------------------------
 
 class Car:
-    
+
     def __init__(self, surface, position, prev_position, speed, angle,
                  hit_box, terrain, time_list, check_point, invalid):
-        
+
         self.surface = surface
         self.position = position
         self.prevposition = prev_position
@@ -286,10 +285,9 @@ class Car:
         key_list = p.key.get_pressed()
         throttle = False
         brake = False
-        
+
         if key_list[UP] == 1:
             throttle = True
-            
         else:
             engine_sound.stop()
 
@@ -301,7 +299,7 @@ class Car:
 
     def update_angle(self):
         key_list = p.key.get_pressed()
-        
+
         if key_list[RIGHT] == 1:
             self.angle += physics.update_angle(self.speed, self.terrain)
 
@@ -310,40 +308,43 @@ class Car:
 
 
     def rotate_surface(self):
-        self.surface = p.transform.rotate(original_p_car_surface, (- self.angle))
+        self.surface = p.transform.rotate(p_car_surface, (- self.angle))
 
 
     def update_position(self):
         self.prev_position = self.position
-        
+
         x_change = math.cos(math.radians(self.angle)) * self.speed
         y_change = math.sin(math.radians(self.angle)) * self.speed
-        
+
         self.position = (self.position[0] + x_change, self.position[1] + y_change)
 
 
-    def update_hit_box(self, tile_length):
-        size_x = car_size * tile_length / float((width / float(visible_screen_length)))
+    def update_hit_box(self):
+        size_x = car_size / scale
         size_y = size_x / 2
-        #print tile_length / (float(width) / visible_screen_length)
 
         x_change1 = (math.cos(math.radians(90 - self.angle)) * size_y) / 2
         y_change1 = -(math.sin(math.radians(90 - self.angle)) * size_y) / 2
         x_change2 = (math.cos(math.radians(self.angle)) * size_x) / 2
         y_change2 = (math.sin(math.radians(self.angle)) * size_x) / 2
 
-        self.hit_box = [(self.position[0] + x_change2 - x_change1, self.position[1] + y_change2 - y_change1),
-                        (self.position[0] + x_change2 + x_change1, self.position[1] + y_change2 + y_change1),
-                        (self.position[0] - x_change2 - x_change1, self.position[1] - y_change2 - y_change1),
-                        (self.position[0] - x_change2 + x_change1, self.position[1] - y_change2 + y_change1)]
+        self.hit_box = [(self.position[0] + x_change2 - x_change1,
+                         self.position[1] + y_change2 - y_change1),
+                        (self.position[0] + x_change2 + x_change1,
+                         self.position[1] + y_change2 + y_change1),
+                        (self.position[0] - x_change2 - x_change1,
+                         self.position[1] - y_change2 - y_change1),
+                        (self.position[0] - x_change2 + x_change1,
+                         self.position[1] - y_change2 + y_change1)]
 
 
     def update_terrain(self, grid):
         terrain_list = []
-    
+
         for position in self.hit_box:
-            x = (position[0] / tile_length + 1)
-            y = (position[1] / tile_length + 1)
+            x = (position[0] + 1) # TODO why plus 1 here?
+            y = (position[1] + 1)
             if 0 < x < len(grid[1]) and 0 < y < len(grid):
                 terrain_list.append(grid[int(y)][int(x)])
 
@@ -362,17 +363,18 @@ class Car:
 
     def update_time(self):
 
+        #new lap
         if self.check_point and finish_line_color in self.terrain:
             self.check_point = False
-            
+
             if self.time_list[0] != None and not self.invalid:
                 self.time_list.append(time.time() - self.time_list[0])
-                
+
             self.time_list[0] = time.time()
             self.invalid = False
 
         self.time_list[1] = time.time()
-            
+
 #---------------------------------------------------------------------------------
 
 def check_event():
@@ -382,87 +384,50 @@ def check_event():
             #quit()
 
         if event.type == p.KEYDOWN:
-            if event.key == p.K_q:
-                p.quit()
-                #quit()
-                
             return event.key
 
 
-def update_screen_pos(p_car):
+def update_screen_pos(tile_length, p_car):
+    tile_length = 1
     x = (p_car.position[0] % tile_length) * (width / visible_screen_length) / tile_length
     y = (p_car.position[1] % tile_length) * (width / visible_screen_length) / tile_length
-    
+
     return (x, y)
 
 
-def update_grid_range(p_car):
+def update_grid_range(tile_length, p_car):
+    tile_length = 1
+
     grid_range = []
     car_square = (int(p_car.position[0] / tile_length), int(p_car.position[1] / tile_length))
-    
+
     grid_range = [car_square[0] - visible_screen_length / 2, car_square[0] + visible_screen_length / 2 + 3,
                   car_square[1] - visible_screen_height / 2, car_square[1] + visible_screen_height / 2 + 3]
-    
+
     return grid_range, car_square
 
-    
-def draw_grid(grid, grid_range, screen_pos, car_square):
-    grid_length = len(grid[1])
-    grid_height = len(grid)
-    tile_length = width / visible_screen_length
+def coord_to_screen(pos, car):
+    return int(scale * (pos[0] - car[0]) + width / 2), int(-scale * (car[1] - pos[1]) + height / 2) # TODO not maching with decode
 
-    off_screen_x = 0
-    off_screen_y = 0
-    x_counter = 0
-    
-    if grid_range[0] < 0:
-        off_screen_x = - grid_range[0] - 1
-        x_counter = off_screen_x
+def screen_to_coord(screen, car):
+    return car[0] + (screen[0] - width / 2) / scale, car[1] - (screen[1] - height / 2) / scale # TODO not matching with encode, should y be flipped?
 
-    if grid_range[1] > len(grid):
-        off_screen_x = - (grid_range[1] - len(grid))
+def draw_grid(grid, grid_range, car_pos, car_square):
+    xmin, ymax = screen_to_coord((0, 0), car_pos) # Top left screen corner to coordinates
+    xmax, ymin = screen_to_coord((width, height), car_pos) # Bot right screen corner to coordinates
 
-    if grid_range[2] < 0:
-        off_screen_y = - grid_range[2] - 1
-
-    y_counter = off_screen_y
-
-    #print off_screen_y, grid_range[2]
-    
-    for y in range(grid_height):
-        for x in range(grid_length):
-            
-            if grid_range[0] < x < grid_range[1] and grid_range[2] < y < grid_range[3]:
-                if grid[y][x] != None:
-                    p.draw.rect(win, grid[y][x], (x_counter * tile_length - screen_pos[0],
-                                                  y_counter * tile_length - screen_pos[1],
-                                                  tile_length, tile_length))
-
-                    if draw_square_numbers:
-                        write_text(str(x) + " "+ str(y), x_counter * tile_length - screen_pos[0],
-                                   y_counter * tile_length - screen_pos[1],
-                                   int(tile_length * 0.2), (255,255,255))
-
-                x_counter += 1
-                if off_screen_x >= 0:
-                    if x_counter == visible_screen_length + 2:
-                        y_counter += 1
-                        x_counter = off_screen_x
-
-                else:
-                    if x_counter == visible_screen_length + off_screen_x + 2:
-                        y_counter += 1
-                        x_counter = 0
+    for y in range(max(int(ymin - 2), 0), min(int(ymax + 2), len(grid))):
+        for x in range(max(int(xmin - 2), 0), min(int(xmax + 2), len(grid[1]))):
+            if grid[y][x] != None:
+                p.draw.rect(win, grid[y][x], coord_to_screen((x, y), car_pos) + (-scale, -scale)) # TODO -scale when map is flipped gives correct collision
 
 
-def draw_car(car_surface, hit_box, tile_length):
-    size = car_surface.get_size()
-    win.blit(car_surface, (width / 2 - size[0] / 2, height / 2 - size[1] / 2))
+def draw_car(p_car, tile_length):
+    rotated_car_surface_size = p_car.surface.get_size()
+    win.blit(p_car.surface, (width / 2 - rotated_car_surface_size[0] / 2, height / 2 - rotated_car_surface_size[1] / 2))
 
-    
-    for position in hit_box:
-        win.set_at((int(position[0] * (width / visible_screen_length) / tile_length),
-                    int(position[1] * (width / visible_screen_length) / tile_length)), (255,0,0))
+    for position in p_car.hit_box:
+        win.set_at(coord_to_screen(position, p_car.position), (255,0,0))
 
 
 def draw_mini_map(grid, car_square):
@@ -471,15 +436,15 @@ def draw_mini_map(grid, car_square):
         mini_tile_length = (width / len(grid)) / 2
     else:
         mini_tile_length = (height / len(grid[1])) / 2
-        
+
     start_x = width - (mini_tile_length * len(grid[1]))
-    
+
     car_x = (car_square[0] + 1) * mini_tile_length
     car_y = (car_square[1] + 1) * mini_tile_length
-    
+
     win.blit(mini_map_surface, (start_x, 0))
     p.draw.rect(win, (255, 0, 0), (start_x + car_x, car_y, mini_tile_length, mini_tile_length))
-    
+
 
 def display_time(time_list, invalid):
     if time_list[0] == None:
@@ -497,22 +462,26 @@ def display_time(time_list, invalid):
     if best_time == 100000:
         best_time = None
 
-    
-    write_text("Current lap: " + str(current_time), width * 0.03, height * 0.03, int(width * 0.02), black)
-    write_text("All time best: " + str(all_time_best), width * 0.03, height * 0.09, int(width * 0.02), black)
+
+    write_text("Current lap: " + str(current_time), width * 0.03,
+               height * 0.03, int(width * 0.02), black)
+    write_text("All time best: " + str(all_time_best), width * 0.03,
+               height * 0.09, int(width * 0.02), black)
 
     if invalid:
-        write_text("laptime invalidated", width * 0.03, height * 0.06, int(width * 0.02), black)
-        
+        write_text("laptime invalidated", width * 0.03,
+                   height * 0.06, int(width * 0.02), black)
+
     else:
-        write_text("Session best: " + str(best_time), width * 0.03, height * 0.06, int(width * 0.02), black)
+        write_text("Session best: " + str(best_time), width * 0.03,
+                   height * 0.06, int(width * 0.02), black)
 
     return best_time
 
 
 def read_best_times():
     best_times = []
-    
+
     with open("best times.txt", "r") as open_file:
         for time in open_file:
             if time.rstrip() == "None":
@@ -527,31 +496,32 @@ def save_times(best_times):
     with open("best times.txt", "w") as open_file:
         for time in best_times:
             open_file.write(str(time) + "\n")
-            
-    
+
+
 def update_best_times(settings, best_time):
     if settings == None:
         return
-    
+
     best_times = read_best_times()
 
     if best_times[settings[1]] == None:
         best_times[settings[1]] = best_time
-        
+
     elif best_time < best_times[settings[1]] and best_time != None:
         best_times[settings[1]] = best_time
 
     save_times(best_times)
-    
+    #print best_times
+
 #------------------------------Main-------------------------------------------------
-    
+
 def main():
 
     settings = start_screen(ESC, None)
-    grid, p_car = restart_game(settings)    
+    grid, p_car = restart_game(settings)
 
     while True:
-        
+
         #settings:
         event = check_event()
         settings = start_screen(event, settings)
@@ -562,30 +532,29 @@ def main():
             settings[3] = False
 
         #car:
-        #p_car.update_speed(150 / float(len(grid)))
-        p_car.update_speed(1)
+        p_car.update_speed(0.1) # TODO Why have this multiplier? Should it not rather be a setting?
         p_car.update_angle()
         p_car.rotate_surface()
         p_car.update_position()
-        p_car.update_hit_box(width / len(grid))
+        p_car.update_hit_box()
         p_car.update_terrain(grid)
         p_car.update_time()
 
         #screen:
-        screen_pos = update_screen_pos(p_car)
-        grid_range, car_square = update_grid_range(p_car)
+        screen_pos = update_screen_pos(width / len(grid), p_car)
+        grid_range, car_square = update_grid_range(width / len(grid), p_car)
 
         #draw:
         win.fill(green)
-        draw_grid(grid, grid_range, screen_pos, car_square)
-        draw_car(p_car.surface, p_car.hit_box, tile_length)
+        draw_grid(grid, grid_range, p_car.position, car_square)
+        draw_car(p_car, tile_length)
         draw_mini_map(grid, car_square)
         best_time = display_time(p_car.time_list, p_car.invalid)
         update_best_times(settings, best_time)
         p.display.update()
-        
+
         clock.tick(30)
-        
+
 main()
 
 
